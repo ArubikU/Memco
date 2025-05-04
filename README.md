@@ -21,7 +21,7 @@ A complete memory management system with vector search capabilities, designed fo
 
 ## 🔧 Installation
 
-### From PyPI (coming soon)
+### From PyPI
 
 ```bash
 pip install memcore

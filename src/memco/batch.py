@@ -6,14 +6,14 @@ from typing import List, Dict, Any, Optional, Union, Tuple, Iterator
 from pathlib import Path
 import sqlite3
 
-from .memcore import MemCore, MemoryRecord, MemoryBuilder
+from .memco import MemCore, MemoryRecord, MemoryBuilder
 
 class BatchProcessor:
     """
     Handles batch operations for the MemCore system.
     """
-    def __init__(self, memcore: MemCore):
-        self.memcore = memcore
+    def __init__(self, memco: MemCore):
+        self.memco = memco
     
     def batch_add(self, memories: List[Union[Dict[str, Any], MemoryRecord]], 
                   encrypted: bool = False) -> Tuple[int, List[str]]:
@@ -31,7 +31,7 @@ class BatchProcessor:
         memory_ids = []
         
         # Start a transaction
-        self.memcore.table.conn.execute("BEGIN TRANSACTION")
+        self.memco.table.conn.execute("BEGIN TRANSACTION")
         
         try:
             for memory in memories:
@@ -42,19 +42,19 @@ class BatchProcessor:
                     record = memory
                 
                 # Generate embedding if not present and provider available
-                if not record.embedding and self.memcore.embedding_provider:
-                    record.embedding = self.memcore.embedding_provider.get_embedding(record.content)
+                if not record.embedding and self.memco.embedding_provider:
+                    record.embedding = self.memco.embedding_provider.get_embedding(record.content)
                 
                 # Add memory
-                memory_id = self.memcore.add_memory(record, encrypted=encrypted)
+                memory_id = self.memco.add_memory(record, encrypted=encrypted)
                 memory_ids.append(memory_id)
                 success_count += 1
             
             # Commit transaction
-            self.memcore.table.conn.execute("COMMIT")
+            self.memco.table.conn.execute("COMMIT")
         except Exception as e:
             # Rollback on error
-            self.memcore.table.conn.execute("ROLLBACK")
+            self.memco.table.conn.execute("ROLLBACK")
             raise e
         
         return success_count, memory_ids
@@ -73,21 +73,21 @@ class BatchProcessor:
         updated_ids = []
         
         # Start a transaction
-        self.memcore.table.conn.execute("BEGIN TRANSACTION")
+        self.memco.table.conn.execute("BEGIN TRANSACTION")
         
         try:
             for memory_id, update_dict in updates:
                 # Update memory
-                success = self.memcore.update_memory(memory_id, update_dict)
+                success = self.memco.update_memory(memory_id, update_dict)
                 if success:
                     updated_ids.append(memory_id)
                     success_count += 1
             
             # Commit transaction
-            self.memcore.table.conn.execute("COMMIT")
+            self.memco.table.conn.execute("COMMIT")
         except Exception as e:
             # Rollback on error
-            self.memcore.table.conn.execute("ROLLBACK")
+            self.memco.table.conn.execute("ROLLBACK")
             raise e
         
         return success_count, updated_ids
@@ -106,21 +106,21 @@ class BatchProcessor:
         deleted_ids = []
         
         # Start a transaction
-        self.memcore.table.conn.execute("BEGIN TRANSACTION")
+        self.memco.table.conn.execute("BEGIN TRANSACTION")
         
         try:
             for memory_id in memory_ids:
                 # Delete memory
-                success = self.memcore.delete_memory(memory_id)
+                success = self.memco.delete_memory(memory_id)
                 if success:
                     deleted_ids.append(memory_id)
                     success_count += 1
             
             # Commit transaction
-            self.memcore.table.conn.execute("COMMIT")
+            self.memco.table.conn.execute("COMMIT")
         except Exception as e:
             # Rollback on error
-            self.memcore.table.conn.execute("ROLLBACK")
+            self.memco.table.conn.execute("ROLLBACK")
             raise e
         
         return success_count, deleted_ids
@@ -139,7 +139,7 @@ class BatchProcessor:
         memories = []
         
         for memory_id in memory_ids:
-            memory = self.memcore.get_memory(memory_id)
+            memory = self.memco.get_memory(memory_id)
             if memory:
                 memories.append(memory.to_dict())
         
@@ -159,7 +159,7 @@ class BatchProcessor:
         Returns:
             Number of exported memories
         """
-        memories = self.memcore.memql_query(query)
+        memories = self.memco.memql_query(query)
         
         with open(output_path, 'w') as f:
             json.dump([memory.to_dict() for memory in memories], f, indent=2)
@@ -280,7 +280,7 @@ class BatchProcessor:
         updates = []
         
         for memory_id in memory_ids:
-            memory = self.memcore.get_memory(memory_id)
+            memory = self.memco.get_memory(memory_id)
             if not memory:
                 continue
             

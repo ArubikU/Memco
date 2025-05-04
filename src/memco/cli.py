@@ -16,7 +16,7 @@ import signal
 import datetime
 
 # Import from our memory system
-from memcore import (
+from memco import (
     MemCore, MemoryBuilder, MemoryRecord, 
     create_mem_folder, add_memory, memql_query, 
     update_memory, export_json, import_json
@@ -130,7 +130,7 @@ def add_command(args):
     """Add a new memory."""
     try:
         # Initialize MemCore
-        memcore = MemCore(
+        memco = MemCore(
             root_path=args.path,
             encryption_key=args.key,
             embedding_provider=None  # We don't have embedding provider in this version
@@ -179,10 +179,10 @@ def add_command(args):
         memory = builder.build()
         
         # Add to system
-        memory_id = memcore.add_memory(memory, encrypted=args.encrypt)
+        memory_id = memco.add_memory(memory, encrypted=args.encrypt)
         
         console.print(f"[green]Memory added successfully with ID: {memory_id}[/green]")
-        console.print(format_memory(memcore.get_memory(memory_id)))
+        console.print(format_memory(memco.get_memory(memory_id)))
         
         return 0
     except Exception as e:
@@ -193,13 +193,13 @@ def get_command(args):
     """Get a memory by ID."""
     try:
         # Initialize MemCore
-        memcore = MemCore(
+        memco = MemCore(
             root_path=args.path,
             encryption_key=args.key
         )
         
         # Get memory
-        memory = memcore.get_memory(args.id)
+        memory = memco.get_memory(args.id)
         
         if not memory:
             console.print(f"[red]Memory with ID '{args.id}' not found.[/red]")
@@ -217,13 +217,13 @@ def update_command(args):
     """Update a memory."""
     try:
         # Initialize MemCore
-        memcore = MemCore(
+        memco = MemCore(
             root_path=args.path,
             encryption_key=args.key
         )
         
         # Check if memory exists
-        memory = memcore.get_memory(args.id)
+        memory = memco.get_memory(args.id)
         if not memory:
             console.print(f"[red]Memory with ID '{args.id}' not found.[/red]")
             return 1
@@ -251,11 +251,11 @@ def update_command(args):
             update_dict["source"] = args.source
         
         # Update memory
-        success = memcore.update_memory(args.id, update_dict)
+        success = memco.update_memory(args.id, update_dict)
         
         if success:
             console.print(f"[green]Memory updated successfully.[/green]")
-            console.print(format_memory(memcore.get_memory(args.id)))
+            console.print(format_memory(memco.get_memory(args.id)))
             return 0
         else:
             console.print(f"[red]Failed to update memory.[/red]")
@@ -268,13 +268,13 @@ def delete_command(args):
     """Delete a memory."""
     try:
         # Initialize MemCore
-        memcore = MemCore(
+        memco = MemCore(
             root_path=args.path,
             encryption_key=args.key
         )
         
         # Check if memory exists
-        memory = memcore.get_memory(args.id)
+        memory = memco.get_memory(args.id)
         if not memory:
             console.print(f"[red]Memory with ID '{args.id}' not found.[/red]")
             return 1
@@ -288,7 +288,7 @@ def delete_command(args):
                 return 0
         
         # Delete memory
-        success = memcore.delete_memory(args.id)
+        success = memco.delete_memory(args.id)
         
         if success:
             console.print(f"[green]Memory deleted successfully.[/green]")
@@ -304,7 +304,7 @@ def query_command(args):
     """Query memories using MemQL."""
     try:
         # Initialize MemCore
-        memcore = MemCore(
+        memco = MemCore(
             root_path=args.path,
             encryption_key=args.key
         )
@@ -312,7 +312,7 @@ def query_command(args):
         # Execute query
         with Progress(transient=True) as progress:
             task = progress.add_task("[cyan]Executing query...", total=1)
-            memories = memcore.memql_query(args.query)
+            memories = memco.memql_query(args.query)
             progress.update(task, completed=1)
         
         # Display results
@@ -349,7 +349,7 @@ def export_command(args):
     """Export memories to a JSON file."""
     try:
         # Initialize MemCore
-        memcore = MemCore(
+        memco = MemCore(
             root_path=args.path,
             encryption_key=args.key
         )
@@ -357,7 +357,7 @@ def export_command(args):
         # Export memories
         with Progress(transient=True) as progress:
             task = progress.add_task("[cyan]Exporting memories...", total=1)
-            count = memcore.export_json(args.output)
+            count = memco.export_json(args.output)
             progress.update(task, completed=1)
         
         console.print(f"[green]Successfully exported {count} memories to '{args.output}'[/green]")
@@ -370,7 +370,7 @@ def import_command(args):
     """Import memories from a JSON file."""
     try:
         # Initialize MemCore
-        memcore = MemCore(
+        memco = MemCore(
             root_path=args.path,
             encryption_key=args.key
         )
@@ -378,7 +378,7 @@ def import_command(args):
         # Import memories
         with Progress(transient=True) as progress:
             task = progress.add_task("[cyan]Importing memories...", total=1)
-            count = memcore.import_json(args.input, args.encrypt)
+            count = memco.import_json(args.input, args.encrypt)
             progress.update(task, completed=1)
         
         console.print(f"[green]Successfully imported {count} memories from '{args.input}'[/green]")
@@ -391,7 +391,7 @@ def backup_command(args):
     """Create a backup of the memory system."""
     try:
         # Initialize MemCore
-        memcore = MemCore(
+        memco = MemCore(
             root_path=args.path,
             encryption_key=args.key
         )
@@ -399,7 +399,7 @@ def backup_command(args):
         # Create backup
         with Progress(transient=True) as progress:
             task = progress.add_task("[cyan]Creating backup...", total=1)
-            backup_path = memcore.backup()
+            backup_path = memco.backup()
             progress.update(task, completed=1)
         
         console.print(f"[green]Successfully created backup at '{backup_path}'[/green]")
@@ -412,7 +412,7 @@ def restore_command(args):
     """Restore from a backup."""
     try:
         # Initialize MemCore
-        memcore = MemCore(
+        memco = MemCore(
             root_path=args.path,
             encryption_key=args.key
         )
@@ -420,7 +420,7 @@ def restore_command(args):
         # Restore from backup
         with Progress(transient=True) as progress:
             task = progress.add_task("[cyan]Restoring from backup...", total=1)
-            success = memcore.restore(args.backup)
+            success = memco.restore(args.backup)
             progress.update(task, completed=1)
         
         if success:
@@ -437,17 +437,17 @@ def list_command(args):
     """List all memories."""
     try:
         # Initialize MemCore
-        memcore = MemCore(
+        memco = MemCore(
             root_path=args.path,
             encryption_key=args.key
         )
         
         # Get all memories
         all_memories = []
-        memory_ids = memcore.viewer.list_memories()
+        memory_ids = memco.viewer.list_memories()
         
         for memory_id in memory_ids:
-            memory = memcore.get_memory(memory_id)
+            memory = memco.get_memory(memory_id)
             if memory:
                 all_memories.append(memory)
         
@@ -509,19 +509,19 @@ def history_command(args):
     """Show the history of a memory."""
     try:
         # Initialize MemCore
-        memcore = MemCore(
+        memco = MemCore(
             root_path=args.path,
             encryption_key=args.key
         )
         
         # Get memory
-        memory = memcore.get_memory(args.id)
+        memory = memco.get_memory(args.id)
         if not memory:
             console.print(f"[red]Memory with ID '{args.id}' not found.[/red]")
             return 1
         
         # Get history
-        history = memcore.get_history(args.id)
+        history = memco.get_history(args.id)
         
         if not history:
             console.print("[yellow]No history found for this memory.[/yellow]")
@@ -556,17 +556,17 @@ def stats_command(args):
     """Show statistics about the memory system."""
     try:
         # Initialize MemCore
-        memcore = MemCore(
+        memco = MemCore(
             root_path=args.path,
             encryption_key=args.key
         )
         
         # Get all memories
         all_memories = []
-        memory_ids = memcore.viewer.list_memories()
+        memory_ids = memco.viewer.list_memories()
         
         for memory_id in memory_ids:
-            memory = memcore.get_memory(memory_id)
+            memory = memco.get_memory(memory_id)
             if memory:
                 all_memories.append(memory)
         
@@ -576,7 +576,7 @@ def stats_command(args):
         # Count encrypted memories
         encrypted_memories = 0
         for memory_id in memory_ids:
-            memory_data = memcore.table.get_memory(memory_id)
+            memory_data = memco.table.get_memory(memory_id)
             if memory_data and memory_data.get("encrypted", False):
                 encrypted_memories += 1
         
@@ -629,7 +629,7 @@ def batch_add_command(args):
     """Add multiple memories from a file."""
     try:
         # Initialize MemCore
-        memcore = MemCore(
+        memco = MemCore(
             root_path=args.path,
             encryption_key=args.key
         )
@@ -658,7 +658,7 @@ def batch_add_command(args):
                 count = 0
                 for memory_data in memories_data:
                     memory = MemoryRecord.from_dict(memory_data)
-                    memory_id = memcore.add_memory(memory, encrypted=args.encrypt)
+                    memory_id = memco.add_memory(memory, encrypted=args.encrypt)
                     memory_ids.append(memory_id)
                     count += 1
                 
@@ -700,7 +700,7 @@ def batch_add_command(args):
                             memory = builder.build()
                             
                             # Add to system
-                            memory_id = memcore.add_memory(memory, encrypted=args.encrypt)
+                            memory_id = memco.add_memory(memory, encrypted=args.encrypt)
                             memory_ids.append(memory_id)
                             count += 1
                 
@@ -729,7 +729,7 @@ def batch_add_command(args):
                 memory = builder.build()
                 
                 # Add to system
-                memory_id = memcore.add_memory(memory, encrypted=args.encrypt)
+                memory_id = memco.add_memory(memory, encrypted=args.encrypt)
                 count = 1
                 memory_ids = [memory_id]
                 
@@ -752,7 +752,7 @@ def batch_folder_command(args):
     """Import memories from a folder of text files."""
     try:
         # Initialize MemCore
-        memcore = MemCore(
+        memco = MemCore(
             root_path=args.path,
             encryption_key=args.key
         )
@@ -807,7 +807,7 @@ def batch_folder_command(args):
                     memory = builder.build()
                     
                     # Add to system
-                    memory_id = memcore.add_memory(memory, encrypted=args.encrypt)
+                    memory_id = memco.add_memory(memory, encrypted=args.encrypt)
                     memory_ids.append(memory_id)
                     count += 1
                 except Exception as e:
@@ -832,7 +832,7 @@ def batch_delete_command(args):
     """Delete multiple memories."""
     try:
         # Initialize MemCore
-        memcore = MemCore(
+        memco = MemCore(
             root_path=args.path,
             encryption_key=args.key
         )
@@ -849,7 +849,7 @@ def batch_delete_command(args):
                 memory_ids = json.load(f)
         elif args.query:
             # IDs from query
-            memories = memcore.memql_query(args.query)
+            memories = memco.memql_query(args.query)
             memory_ids = [memory.id for memory in memories]
         
         if not memory_ids:
@@ -879,7 +879,7 @@ def batch_delete_command(args):
             
             for memory_id in memory_ids:
                 try:
-                    success = memcore.delete_memory(memory_id)
+                    success = memco.delete_memory(memory_id)
                     if success:
                         deleted_ids.append(memory_id)
                         count += 1
@@ -905,7 +905,7 @@ def batch_export_command(args):
     """Export multiple memories."""
     try:
         # Initialize MemCore
-        memcore = MemCore(
+        memco = MemCore(
             root_path=args.path,
             encryption_key=args.key
         )
@@ -922,7 +922,7 @@ def batch_export_command(args):
                 memory_ids = json.load(f)
         elif args.query:
             # IDs from query
-            memories = memcore.memql_query(args.query)
+            memories = memco.memql_query(args.query)
             memory_ids = [memory.id for memory in memories]
         
         if not memory_ids and not args.query:
@@ -943,13 +943,13 @@ def batch_export_command(args):
             
             if args.query and not memory_ids:
                 # Export query results directly
-                memories = memcore.memql_query(args.query)
+                memories = memco.memql_query(args.query)
                 memories_to_export = [memory.to_dict() for memory in memories]
                 progress.update(task, completed=1)
             else:
                 # Export specific memories
                 for memory_id in memory_ids:
-                    memory = memcore.get_memory(memory_id)
+                    memory = memco.get_memory(memory_id)
                     if memory:
                         memories_to_export.append(memory.to_dict())
                     progress.update(task, advance=1)

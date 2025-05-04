@@ -640,7 +640,7 @@ class MemCore:
     def backup(self) -> str:
         """Create a complete backup of the memory system."""
         timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-        backup_dir = f"memcore_backup_{timestamp}"
+        backup_dir = f"memco_backup_{timestamp}"
         
         # Create backup directory
         os.makedirs(backup_dir, exist_ok=True)
@@ -689,8 +689,8 @@ class MemQLParser:
     """
     Parser for the MemQL query language.
     """
-    def __init__(self, memcore: MemCore):
-        self.memcore = memcore
+    def __init__(self, memco: MemCore):
+        self.memco = memco
     
     def execute(self, query: str) -> List[MemoryRecord]:
         """Execute a MemQL query."""
@@ -738,7 +738,7 @@ class MemQLParser:
                 params[key] = value
         
         # Create memory builder
-        builder = MemoryBuilder(self.memcore.embedding_provider)
+        builder = MemoryBuilder(self.memco.embedding_provider)
         
         # Set parameters
         if "content" in params:
@@ -752,10 +752,10 @@ class MemQLParser:
         
         # Build and add memory
         memory = builder.build()
-        memory_id = self.memcore.add_memory(memory)
+        memory_id = self.memco.add_memory(memory)
         
         # Return the created memory
-        return [self.memcore.get_memory(memory_id)]
+        return [self.memco.get_memory(memory_id)]
     
     def _execute_delete(self, query: str) -> List[MemoryRecord]:
         """Execute a DELETE query."""
@@ -767,7 +767,7 @@ class MemQLParser:
             memories = self._execute_select("SELECT LIMIT 0")
             deleted = []
             for memory in memories:
-                if self.memcore.delete_memory(memory.id):
+                if self.memco.delete_memory(memory.id):
                     deleted.append(memory)
             return deleted
                     
@@ -779,7 +779,7 @@ class MemQLParser:
         # Delete each memory
         deleted = []
         for memory in memories:
-            if self.memcore.delete_memory(memory.id):
+            if self.memco.delete_memory(memory.id):
                 deleted.append(memory)
         
         return deleted
@@ -830,7 +830,7 @@ class MemQLParser:
             elif vector_search_query.startswith('"') and vector_search_query.endswith('"'):
                 vector_search_query = vector_search_query[1:-1]
             vector_search = True
-            vector_search_vector = self.memcore.embedding_provider.get_embedding(vector_search_query)
+            vector_search_vector = self.memco.embedding_provider.get_embedding(vector_search_query)
         vector_score = 0.5
         if "SCORE" in query.upper():
             vector_score_index = query.upper().find("SCORE")
@@ -842,7 +842,7 @@ class MemQLParser:
                 vector_mem = memory['embedding']
                 if not vector_mem:
                     return False
-                score = self.memcore.vector_search._cosine_similarity(vector_mem, vector_search_vector)
+                score = self.memco.vector_search._cosine_similarity(vector_mem, vector_search_vector)
                 memory["similarity_score"] = score
                 return score > vector_score
             
@@ -928,7 +928,7 @@ class MemQLParser:
             return True
         
         # Execute query
-        results = self.memcore.table.query(filter_func)
+        results = self.memco.table.query(filter_func)
         
         # Sort results if ORDER BY is specified
         if order_by:
@@ -945,8 +945,8 @@ class MemQLParser:
         memories = []
         for result in results:
             # Decrypt content if encrypted
-            if result.get("encrypted", False) and self.memcore.encryption_key:
-                result["content"] = self.memcore._decrypt_data(result["content"])
+            if result.get("encrypted", False) and self.memco.encryption_key:
+                result["content"] = self.memco._decrypt_data(result["content"])
             
             memories.append(MemoryRecord.from_dict(result))
     
@@ -993,8 +993,8 @@ class MemQLParser:
         memories = self._execute_select(f"SELECT WHERE {where_clause}" if where_clause else "SELECT")
         updated = []
         for memory in memories:
-            if self.memcore.update_memory(memory.id, fields):
-                updated_mem = self.memcore.get_memory(memory.id)
+            if self.memco.update_memory(memory.id, fields):
+                updated_mem = self.memco.get_memory(memory.id)
                 if updated_mem:
                     updated.append(updated_mem)
         return updated
@@ -1013,25 +1013,25 @@ def create_mem_folder(path: str = ".memfolder") -> bool:
 
 def add_memory(memory: Union[MemoryRecord, Dict[str, Any]], encrypted: bool = False, path: str = ".memfolder", encryption_key: Optional[str] = None) -> str:
     """Add a memory to the memory system."""
-    memcore = MemCore(path, encryption_key)
-    return memcore.add_memory(memory, encrypted)
+    memco = MemCore(path, encryption_key)
+    return memco.add_memory(memory, encrypted)
 
 def memql_query(query: str, path: str = ".memfolder", encryption_key: Optional[str] = None) -> List[MemoryRecord]:
     """Execute a MemQL query."""
-    memcore = MemCore(path, encryption_key)
-    return memcore.memql_query(query)
+    memco = MemCore(path, encryption_key)
+    return memco.memql_query(query)
 
 def update_memory(memory_id: str, fields: Dict[str, Any], path: str = ".memfolder", encryption_key: Optional[str] = None) -> bool:
     """Update a memory in the memory system."""
-    memcore = MemCore(path, encryption_key)
-    return memcore.update_memory(memory_id, fields)
+    memco = MemCore(path, encryption_key)
+    return memco.update_memory(memory_id, fields)
 
 def export_json(output_path: str, mem_path: str = ".memfolder", encryption_key: Optional[str] = None) -> int:
     """Export memories to a JSON file."""
-    memcore = MemCore(mem_path, encryption_key)
-    return memcore.export_json(output_path)
+    memco = MemCore(mem_path, encryption_key)
+    return memco.export_json(output_path)
 
 def import_json(input_path: str, mem_path: str = ".memfolder", encryption_key: Optional[str] = None, encrypt: bool = False) -> int:
     """Import memories from a JSON file."""
-    memcore = MemCore(mem_path, encryption_key)
-    return memcore.import_json(input_path, encrypt)
+    memco = MemCore(mem_path, encryption_key)
+    return memco.import_json(input_path, encrypt)

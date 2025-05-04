@@ -1,5 +1,5 @@
-from memcore import MemCore, MemoryBuilder
-from memcore.embedding import get_embedding_provider
+from memco import MemCore, MemoryBuilder
+from memco.embedding import get_embedding_provider
 
 # Initialize the embedding provider
 embedding_provider = get_embedding_provider()

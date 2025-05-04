@@ -297,13 +297,13 @@ class MemViewer(tb.Window):
             # Create a temporary MemCore instance to execute the query
             from memco import MemCore, MemQLParser
             
-            memcore = MemCore(
+            memco = MemCore(
                 root_path=os.path.dirname(self.mem_folder),
                 encryption_key=self.encryption_key
             )
             
             # Execute query
-            memories = memcore.memql_query(query)
+            memories = memco.memql_query(query)
             
             if not memories:
                 messagebox.showinfo("Información", "No se encontraron memorias que coincidan con la consulta")

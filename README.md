@@ -24,14 +24,14 @@ A complete memory management system with vector search capabilities, designed fo
 ### From PyPI
 
 ```bash
-pip install memcore
+pip install memco
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/memco/memcore.git
-cd memcore
+git clone https://github.com/memco/memco.git
+cd memco
 pip install -e .
 ```
 
@@ -40,8 +40,8 @@ pip install -e .
 ### Basic Example
 
 ```python
-from memcore import MemCore, MemoryBuilder
-from memcore.embedding import get_embedding_provider
+from memco import MemCore, MemoryBuilder
+from memco.embedding import get_embedding_provider
 
 # Initialize the embedding provider
 embedding_provider = get_embedding_provider()
@@ -75,7 +75,7 @@ print(f"Content: {retrieved.content}")
 ### Using the Client
 
 ```python
-from memcore_client import MemCoreClient
+from memco_client import MemCoreClient
 
 # Initialize the client
 client = MemCoreClient("http://localhost:8000")

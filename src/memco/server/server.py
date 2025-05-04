@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional
 import threading
 from dotenv import load_dotenv
 
-from ..memcore import MemCore, MemoryRecord, MemoryBuilder
+from ..memco import MemCore, MemoryRecord, MemoryBuilder
 from ..embedding import get_embedding_provider
 
 # Load environment variables
@@ -28,7 +28,7 @@ app.add_middleware(
 
 # Global variables
 server_instance = None
-memcore_instance = None
+memco_instance = None
 
 # Models
 class MemoryCreate(BaseModel):
@@ -79,10 +79,10 @@ def get_api_key(api_key_header: str = Security(api_key_header)):
     return api_key_header
 
 # Dependency
-def get_memcore():
-    if memcore_instance is None:
+def get_memco():
+    if memco_instance is None:
         raise HTTPException(status_code=500, detail="MemCore instance not initialized")
-    return memcore_instance
+    return memco_instance
 
 # Routes
 @app.get("/", dependencies=[Depends(get_api_key)])
@@ -90,8 +90,8 @@ def read_root():
     return {"message": "MemCore Server is running"}
 
 @app.post("/memories", response_model=MemoryResponse, dependencies=[Depends(get_api_key)])
-def create_memory(memory: MemoryCreate, memcore: MemCore = Depends(get_memcore)):
-    builder = MemoryBuilder(memcore.embedding_provider)
+def create_memory(memory: MemoryCreate, memco: MemCore = Depends(get_memco)):
+    builder = MemoryBuilder(memco.embedding_provider)
     if memory.content:
         builder.set_content(memory.content)
     if memory.tags:
@@ -103,21 +103,21 @@ def create_memory(memory: MemoryCreate, memcore: MemCore = Depends(get_memcore))
     if memory.source:
         builder.set_source(memory.source)
     memory_record = builder.build()
-    memory_id = memcore.add_memory(memory_record, encrypted=memory.encrypted)
-    data = memcore.get_memory(memory_id).to_dict(True)
+    memory_id = memco.add_memory(memory_record, encrypted=memory.encrypted)
+    data = memco.get_memory(memory_id).to_dict(True)
     print(data)
     return data
 
 @app.get("/memories/{memory_id}", response_model=MemoryResponse, dependencies=[Depends(get_api_key)])
-def get_memory(memory_id: str, memcore: MemCore = Depends(get_memcore)):
-    memory = memcore.get_memory(memory_id)
+def get_memory(memory_id: str, memco: MemCore = Depends(get_memco)):
+    memory = memco.get_memory(memory_id)
     if not memory:
         raise HTTPException(status_code=404, detail="Memory not found")
     
     return memory.to_dict()
 
 @app.put("/memories/{memory_id}", response_model=MemoryResponse, dependencies=[Depends(get_api_key)])
-def update_memory(memory_id: str, memory: MemoryUpdate, memcore: MemCore = Depends(get_memcore)):
+def update_memory(memory_id: str, memory: MemoryUpdate, memco: MemCore = Depends(get_memco)):
     # Build update dictionary
     update_dict = {}
     if memory.content is not None:
@@ -132,42 +132,42 @@ def update_memory(memory_id: str, memory: MemoryUpdate, memcore: MemCore = Depen
         update_dict["source"] = memory.source
     
     # Update memory
-    success = memcore.update_memory(memory_id, update_dict)
+    success = memco.update_memory(memory_id, update_dict)
     if not success:
         raise HTTPException(status_code=404, detail="Memory not found")
     
-    return memcore.get_memory(memory_id).to_dict()
+    return memco.get_memory(memory_id).to_dict()
 
 @app.delete("/memories/{memory_id}", dependencies=[Depends(get_api_key)])
-def delete_memory(memory_id: str, memcore: MemCore = Depends(get_memcore)):
-    success = memcore.delete_memory(memory_id)
+def delete_memory(memory_id: str, memco: MemCore = Depends(get_memco)):
+    success = memco.delete_memory(memory_id)
     if not success:
         raise HTTPException(status_code=404, detail="Memory not found")
     
     return {"message": "Memory deleted successfully"}
 
 @app.post("/query/memql", response_model=List[MemoryResponse], dependencies=[Depends(get_api_key)])
-def query_memql(query: MemQLQuery, memcore: MemCore = Depends(get_memcore)):
-    memories = memcore.memql_query(query.query)
+def query_memql(query: MemQLQuery, memco: MemCore = Depends(get_memco)):
+    memories = memco.memql_query(query.query)
     return [memory.to_dict() for memory in memories]
 
 @app.post("/query/vector", response_model=List[MemoryResponse], dependencies=[Depends(get_api_key)])
-def query_vector(query: VectorSearchQuery, memcore: MemCore = Depends(get_memcore)):
-    memories = memcore.vector_search_query(query.text, query.top_k)
+def query_vector(query: VectorSearchQuery, memco: MemCore = Depends(get_memco)):
+    memories = memco.vector_search_query(query.text, query.top_k)
     return [memory.to_dict() for memory in memories]
 
 @app.post("/export", dependencies=[Depends(get_api_key)])
-def export_memories(output_path: str = Body(..., embed=True), memcore: MemCore = Depends(get_memcore)):
-    count = memcore.export_json(output_path)
+def export_memories(output_path: str = Body(..., embed=True), memco: MemCore = Depends(get_memco)):
+    count = memco.export_json(output_path)
     return {"message": f"Exported {count} memories to {output_path}"}
 
 @app.post("/import", dependencies=[Depends(get_api_key)])
 def import_memories(
     input_path: str = Body(..., embed=True),
     encrypt: bool = Body(False, embed=True),
-    memcore: MemCore = Depends(get_memcore)
+    memco: MemCore = Depends(get_memco)
 ):
-    count = memcore.import_json(input_path, encrypt)
+    count = memco.import_json(input_path, encrypt)
     return {"message": f"Imported {count} memories from {input_path}"}
 
 # Server functions
@@ -180,13 +180,13 @@ def start_server(
     api_keys: Optional[List[str]] = None
 ):
     """Start the MemCore server."""
-    global memcore_instance, api_keys_list
+    global memco_instance, api_keys_list
 
     # Set API keys
     api_keys_list = api_keys or []
     
     # Initialize MemCore
-    memcore_instance = MemCore(
+    memco_instance = MemCore(
         root_path=mem_path,
         encryption_key=encryption_key,
         embedding_provider=get_embedding_provider()
@@ -204,8 +204,8 @@ def start_server(
 
 def stop_server():
     """Stop the MemCore server."""
-    global memcore_instance
+    global memco_instance
     
-    if memcore_instance:
-        memcore_instance.close()
-        memcore_instance = None
+    if memco_instance:
+        memco_instance.close()
+        memco_instance = None

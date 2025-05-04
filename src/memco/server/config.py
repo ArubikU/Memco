@@ -32,7 +32,7 @@ class ServerConfig:
                 "host": self.host,
                 "port": self.port
             },
-            "memcore": {
+            "memco": {
                 "mem_path": self.mem_path,
                 "encryption_key": "***" if self.encryption_key else None
             },

@@ -1,4 +1,4 @@
-from .memcore import (
+from .memco import (
     MemoryRecord,
     MemoryBuilder,
     MemTable,

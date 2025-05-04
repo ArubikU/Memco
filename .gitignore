@@ -47,7 +47,7 @@ venv.bak/
 *~
 .DS_Store
 
-# Memcore specific
+# Memco specific
 .memfolder/
 .memtable/
 .memhistory/

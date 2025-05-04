@@ -22,6 +22,7 @@ class VectorSearch:
         self.db_path = os.path.join(path, "vectors.db")
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self._initialize_db()
+        self.rng = np.random.RandomState(42)  # For reproducibility
     
     def _initialize_db(self):
         """Initialize the database schema."""
@@ -136,6 +137,16 @@ class VectorSearch:
         
         return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
     
+    
+    def _compress_vector(self, vector: np.ndarray, level: int = 10) -> np.ndarray:
+    
+        target_dim = len(vector) // level
+        # Generate random projection matrix (Gaussian)
+        projection_matrix = self.rng.randn(len(vector), target_dim) / np.sqrt(target_dim)
+        
+        # Project the vector
+        compressed = np.dot(vector, projection_matrix)
+        return compressed
     def close(self):
         """Close the database connection."""
         self.conn.close()

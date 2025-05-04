@@ -4,7 +4,6 @@ import uuid
 import time
 import shutil
 import datetime
-import pickle
 from typing import Dict, List, Any, Optional, Union, Callable
 from pathlib import Path
 import base64
@@ -12,6 +11,7 @@ import hashlib
 from cryptography.fernet import Fernet
 from .vector_search import VectorSearch
 from .embedding import get_embedding_provider, EmbeddingProvider
+from .mem import save_mem_to_file, load_mem_from_file
 
 class MemoryRecord:
     """
@@ -157,9 +157,12 @@ class MemTable:
     
     def add_memory(self, memory: MemoryRecord, encrypted: bool = False) -> str:
         """Add a memory record to the table."""
-        memory_dict = memory.to_dict()
-        memory_dict["encrypted"] = encrypted
+        memory_dict = memory.to_dict(True)
         
+        memory_dict["encrypted"] = encrypted
+        memory_dict["source"] = None
+        memory_dict["content"] = None
+        memory_dict["metadata"] = None
         # Store in memory
         self.memories[memory.id] = memory_dict
         
@@ -168,8 +171,7 @@ class MemTable:
         
         # Save the full memory to a .mem file
         mem_file = os.path.join(self.path, f"{memory.id}.mem")
-        with open(mem_file, 'wb') as f:
-            pickle.dump(memory_dict, f)
+        save_mem_to_file(mem_file, memory_dict)
         
         return memory.id
     
@@ -182,8 +184,7 @@ class MemTable:
         mem_file = os.path.join(self.path, f"{memory_id}.mem")
         if os.path.exists(mem_file):
             try:
-                with open(mem_file, 'rb') as f:
-                    return pickle.load(f)
+               return load_mem_from_file(mem_file)
             except Exception as e:
                 print(f"Error loading memory file: {e}")
                 return self.memories.get(memory_id)
@@ -212,8 +213,7 @@ class MemTable:
         
         # Update the .mem file
         mem_file = os.path.join(self.path, f"{memory_id}.mem")
-        with open(mem_file, 'wb') as f:
-            pickle.dump(memory, f)
+        save_mem_to_file(mem_file, memory)
         
         return True
     
@@ -244,8 +244,7 @@ class MemTable:
             mem_file = os.path.join(self.path, f"{memory_id}.mem")
             if os.path.exists(mem_file):
                 try:
-                    with open(mem_file, 'rb') as f:
-                        memory = pickle.load(f)
+                   memory = load_mem_from_file(mem_file)
                 except Exception:
                     pass  # Use the in-memory version if file can't be loaded
             
@@ -275,8 +274,7 @@ class MemHistory:
         timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
         history_file = os.path.join(history_path, f"{timestamp}_{action}.memh")
         
-        with open(history_file, 'wb') as f:
-            pickle.dump(memory.to_dict(), f)
+        save_mem_to_file(history_file, memory.to_dict())
     
     def get_history(self, memory_id: str) -> List[Dict[str, Any]]:
         """Get the history of a memory record."""
@@ -292,8 +290,7 @@ class MemHistory:
                 action = action.replace('.memh', '')
                 
                 try:
-                    with open(file_path, 'rb') as f:
-                        data = pickle.load(f)
+                    data = load_mem_from_file(file_path)
                     
                     history.append({
                         "timestamp": timestamp,
@@ -337,8 +334,7 @@ class MemViewer:
             return None
         
         try:
-            with open(mem_file, 'rb') as f:
-                memory = pickle.load(f)
+            memory = load_mem_from_file(mem_file)
             return memory
         except Exception as e:
             print(f"Error loading memory file: {e}")
@@ -615,6 +611,7 @@ class MemCore:
         
         # Decrypt content if encrypted
         for memory in memories:
+            memory["embedding"] = None
             if memory.get("encrypted", False) and self.encryption_key:
                 memory["content"] = self._decrypt_data(memory["content"])
                 memory["encrypted"] = False  # Mark as decrypted in the export
@@ -966,7 +963,7 @@ class MemQLParser:
         if "SET" in query.upper():
             set_index = query.upper().find("SET")
             if "WHERE" in query.upper():
-                    where_index = query.upper().find("WHERE")
+                where_index = query.upper().find("WHERE")
                 set_clause = query[set_index + 3:where_index].strip()
                 where_clause = query[where_index + 5:].strip()
             else:
@@ -976,7 +973,7 @@ class MemQLParser:
         fields = {}
         for part in set_clause.split(","):
             if "=" in part:
-                    key, value = part.split("=", 1)
+                key, value = part.split("=", 1)
                 key = key.strip()
                 value = value.strip()
                 if value.startswith('"') and value.endswith('"'):

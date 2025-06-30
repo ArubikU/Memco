@@ -12,7 +12,9 @@ setup(
         "rich",
         "fastapi",
         "uvicorn",
-        "ttkbootstrap"
+        "ttkbootstrap",
+        "transformers",
+        "einops",
     ],
     entry_points={
         "console_scripts": [

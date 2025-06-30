@@ -12,7 +12,6 @@ from cryptography.fernet import Fernet
 from .vector_search import VectorSearch
 from .embedding import get_embedding_provider, EmbeddingProvider
 from .mem import save_mem_to_file, load_mem_from_file
-
 class MemoryRecord:
     """
     Represents a single memory record in the MemCore system.
@@ -36,21 +35,10 @@ class MemoryRecord:
         self.updated_at = updated_at or self.created_at
         self.source = source
         self.embedding = embedding or []
-    
+
     def to_dict(self, no_embedding: bool = False) -> Dict[str, Any]:
         """Convert the memory record to a dictionary."""
-        if no_embedding:
-            return {
-                "id": self.id,
-                "content": self.content,
-                "tags": self.tags,
-                "metadata": self.metadata,
-                "importance": self.importance,
-                "created_at": self.created_at,
-                "updated_at": self.updated_at,
-                "source": self.source
-            }
-        return {
+        d = {
             "id": self.id,
             "content": self.content,
             "tags": self.tags,
@@ -58,10 +46,25 @@ class MemoryRecord:
             "importance": self.importance,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
-            "source": self.source,
-            "embedding": self.embedding
+            "source": self.source
         }
-    
+        if not no_embedding:
+            d["embedding"] = self.embedding
+        return d
+
+    def to_json(self, no_embedding: bool = False) -> str:
+        """Convert the memory record to a JSON string."""
+        return json.dumps(self.to_dict(no_embedding), default=self._json_default)
+
+    @staticmethod
+    def _json_default(obj):
+        """Helper for serializing non-serializable objects."""
+        if isinstance(obj, (datetime.datetime, datetime.date)):
+            return obj.isoformat()
+        if isinstance(obj, set):
+            return list(obj)
+        raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'MemoryRecord':
         """Create a memory record from a dictionary."""
@@ -77,6 +80,12 @@ class MemoryRecord:
             embedding=data.get("embedding", [])
         )
 
+    @classmethod
+    def from_json(cls, json_str: str) -> 'MemoryRecord':
+        """Create a memory record from a JSON string."""
+        data = json.loads(json_str)
+        return cls.from_dict(data)
+
 
 class MemoryBuilder:
     """
@@ -89,9 +98,6 @@ class MemoryBuilder:
     def set_content(self, content: str) -> 'MemoryBuilder':
         """Set the content of the memory."""
         self.record.content = content
-        # Generate embedding if AI provider is available
-        if self.ai_provider and content:
-            self.record.embedding = self.ai_provider.get_embedding(content)
         return self
     
     def set_tags(self, tags: Union[List[str], str]) -> 'MemoryBuilder':
@@ -115,16 +121,30 @@ class MemoryBuilder:
         """Set the source of the memory."""
         self.record.source = source
         return self
-    
+        
     def build(self) -> MemoryRecord:
-        """Build and return the memory record."""
-        
-        if(not self.record.content and not self.record.embedding):
+        """Build and return a new memory record instance."""
+
+        if not self.record.content and not self.record.embedding:
             raise ValueError("Memory must have either content or embedding")
-        self.record.id = str(uuid.uuid4())
-        self.record.created_at = time.time()
-        
-        return self.record
+
+        # Crea una copia del record actual
+        built_record = MemoryRecord(
+            content=self.record.content,
+            embedding=self.record.embedding.copy() if self.record.embedding else [],
+            tags=self.record.tags.copy() if self.record.tags else [],
+            source=self.record.source,
+            metadata=self.record.metadata.copy() if self.record.metadata else {},
+            importance=self.record.importance,
+        )
+
+        built_record.id = str(uuid.uuid4())
+        built_record.created_at = time.time()
+
+        # Reset para el siguiente build
+        self.record = MemoryRecord()
+        return built_record
+
 
 
 class MemTable:
@@ -462,11 +482,11 @@ class MemCore:
         """Add a memory record to the system."""
         if isinstance(memory, dict):
             memory = MemoryRecord.from_dict(memory)
-        
         # Generate embedding if not already present
-        if not memory.embedding and self.embedding_provider:
+        if (memory.embedding is None or len(memory.embedding) == 0) and self.embedding_provider:
             memory.embedding = self.embedding_provider.get_embedding(memory.content)
-        
+        else:
+            memory.embedding = []
         # Store original values for vector search
         original_content = memory.content
         original_tags = memory.tags.copy() if memory.tags else []
@@ -484,16 +504,52 @@ class MemCore:
         # Add to history
         self.history.add_history(memory, "create")
         
-        # Add to vector search if embedding exists
-        if memory.embedding:
-            self.vector_search.add_vector(memory_id, memory.embedding, {
-                "content": original_content,
-                "tags": original_tags,
-                "importance": memory.importance
-            })
+        self.vector_search.add_vector(memory_id, memory.embedding, {
+            "content": original_content,
+            "tags": original_tags,
+            "importance": memory.importance
+        })
         
         return memory_id
-    
+    def add_bulk_memories(self, memories: List[MemoryRecord], encrypted: bool = False) -> List[str]:
+        """Add multiple memory records to the system in batches of 30 for embedding generation."""
+        ids = []
+        batch_size = 30
+        for i in range(0, len(memories), batch_size):
+            batch = []
+            for j in range(i, min(i + batch_size, len(memories))):
+                batch.append(memories[j])
+            contents = [mem.content for mem in batch]
+            #print(contents)
+
+            # Generate embeddings in batch for all memories
+            embeddings = []
+            if self.embedding_provider and len(contents) > 0:
+                embeddings = self.embedding_provider.get_batch_embeddings(contents)
+            # Assign embeddings back to the correct memories
+            for j, mem in enumerate(batch):
+                mem.embedding = embeddings[j] if j < len(embeddings) else []
+            # Add each memory to the system
+            for mem in batch:
+                original_content = mem.content
+                original_tags = mem.tags.copy() if mem.tags else []
+                # Encrypt fields if requested
+                if encrypted and self.encryption_key:
+                    mem.content = self._encrypt_data(mem.content)
+                    mem.tags = self._encrypt_data(mem.tags)
+                    mem.source = self._encrypt_data(mem.source)
+                    mem.metadata = self._encrypt_data(mem.metadata)
+                memory_id = self.table.add_memory(mem, encrypted)
+                self.history.add_history(mem, "create")
+                self.vector_search.add_vector(memory_id, mem.embedding, {
+                    "content": original_content,
+                    "tags": original_tags,
+                    "importance": mem.importance
+                })
+                ids.append(memory_id)
+        return ids
+                    
+
     def get_memory(self, memory_id: str) -> Optional[MemoryRecord]:
         """Get a memory record by ID."""
         data = self.table.get_memory(memory_id)
@@ -626,13 +682,10 @@ class MemCore:
         with open(input_path, 'r') as f:
             memories = json.load(f)
         
-        count = 0
-        for memory_data in memories:
-            memory = MemoryRecord.from_dict(memory_data)
-            self.add_memory(memory, encrypted=encrypt)
-            count += 1
-        
-        return count
+        # Use bulk add for efficiency
+        memory_records = [MemoryRecord.from_dict(memory_data) for memory_data in memories]
+        self.add_bulk_memories(memory_records, encrypted=encrypt)
+        return len(memory_records)
     
     def backup(self) -> str:
         """Create a complete backup of the memory system."""

@@ -30,7 +30,7 @@ pip install memco
 ### From Source
 
 ```bash
-git clone https://github.com/memco/memco.git
+git clone https://github.com/arubiku/memco.git
 cd memco
 pip install -e .
 ```
